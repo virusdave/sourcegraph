@@ -622,3 +622,44 @@ func byteSlicesToStrings(in [][]byte) []string {
 	}
 	return res
 }
+
+func (gs *GRPCServer) MergeBase(ctx context.Context, req *proto.MergeBaseRequest) (*proto.MergeBaseResponse, error) {
+	accesslog.Record(
+		ctx,
+		req.GetRepo(),
+		log.String("base", req.GetBaseCommitSha()),
+		log.String("p4port", req.GetHeadCommitSha()),
+	)
+
+	if req.GetRepo() == "" {
+		return nil, status.New(codes.InvalidArgument, "repo must be specified").Err()
+	}
+
+	if req.GetBaseCommitSha() == "" {
+		return nil, status.New(codes.InvalidArgument, "base_commit_sha must be specified").Err()
+	}
+
+	if req.GetHeadCommitSha() == "" {
+		return nil, status.New(codes.InvalidArgument, "head_commit_sha must be specified").Err()
+	}
+
+	// Validate that both shas are valid shas.
+	// gitdomain.IsAbsoluteRevision(req.GetBaseCommitSha())
+
+	repoDir := gitserverfs.RepoDirFromName(gs.Server.ReposDir, api.RepoName(req.GetRepo()))
+
+	if !repoCloned(repoDir) {
+		// TODO: Can we better type this error?
+		return nil, status.New(codes.NotFound, "repo not cloned").Err()
+	}
+
+	sha, err := git.MergeBase(ctx, gs.Server.RecordingCommandFactory, api.RepoName(req.GetRepo()), repoDir, req.GetBaseCommitSha(), req.GetHeadCommitSha())
+	if err != nil {
+		// TODO: Better error checking.
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	return &proto.MergeBaseResponse{
+		MergeBaseCommitSha: string(sha),
+	}, nil
+}

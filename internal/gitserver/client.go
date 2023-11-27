@@ -343,7 +343,7 @@ type Client interface {
 	ListBranches(ctx context.Context, repo api.RepoName, opt BranchesOptions) ([]*gitdomain.Branch, error)
 
 	// MergeBase returns the merge base commit for the specified commits.
-	MergeBase(ctx context.Context, repo api.RepoName, a, b api.CommitID) (api.CommitID, error)
+	MergeBase(ctx context.Context, repo api.RepoName, base, head api.CommitID) (api.CommitID, error)
 
 	// Remove removes the repository clone from gitserver.
 	Remove(context.Context, api.RepoName) error
