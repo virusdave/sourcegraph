@@ -10349,6 +10349,11 @@ enum PermissionNamespace {
     key-value pair metadata.
     """
     REPO_METADATA
+
+    """
+    This represents the Cody namespace.
+    """
+    CODY
 }
 
 """

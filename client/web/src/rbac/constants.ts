@@ -7,3 +7,5 @@ export const BatchChangesWritePermission = 'BATCH_CHANGES#WRITE'
 export const OwnershipAssignPermission = 'OWNERSHIP#ASSIGN'
 
 export const RepoMetadataWritePermission = 'REPO_METADATA#WRITE'
+
+export const CodyAccessPermission = 'CODY#ACCESS'
