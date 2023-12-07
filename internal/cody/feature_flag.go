@@ -10,6 +10,7 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/actor"
 	"github.com/sourcegraph/sourcegraph/internal/auth"
 	"github.com/sourcegraph/sourcegraph/internal/conf"
+	"github.com/sourcegraph/sourcegraph/internal/conf/conftypes"
 	"github.com/sourcegraph/sourcegraph/internal/conf/deploy"
 	"github.com/sourcegraph/sourcegraph/internal/database"
 	"github.com/sourcegraph/sourcegraph/internal/featureflag"
@@ -17,6 +18,15 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/rbac"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
 )
+
+func init() {
+	conf.ContributeWarning(func(c conftypes.SiteConfigQuerier) (problems conf.Problems) {
+		if c.SiteConfig().CodyRestrictUsersFeatureFlag != nil {
+			problems = append(problems, conf.NewSiteProblem("cody.restrictUsersFeatureFlag has been deprecated. Please remove it from your site config and use cody.permissions instead: https://docs.sourcegraph.com/cody/overview/enable-cody-enterprise#enable-cody-only-for-some-users"))
+		}
+		return
+	})
+}
 
 // IsCodyEnabled determines if cody is enabled for the actor in the given context.
 // If it is an unauthenticated request, cody is disabled.
