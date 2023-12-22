@@ -253,20 +253,21 @@ export const CodeMirrorQueryInputWrapper = forwardRef<Editor, PropsWithChildren<
             [popoverID, dynamicExtensions, externalExtensions, modeNotifierExtension]
         )
 
+        const focus = useCallback(() => {
+            editorRef.current?.focus()
+        }, [])
+
         // Position cursor at the end of the input when the input changes from external sources.
         // This is necessary because the initial value might be set asynchronously.
         useEffect(() => {
             const editor = editorRef.current
             if (editor && !editor.hasFocus && queryState.changeSource !== QueryChangeSource.userInput) {
+                focus()
                 editor.dispatch({
                     selection: { anchor: editor.state.doc.length },
                 })
             }
-        }, [queryState])
-
-        const focus = useCallback(() => {
-            editorRef.current?.focus()
-        }, [])
+        }, [queryState, focus])
 
         const toggleHistoryMode = useCallback(() => {
             if (editorRef.current) {
