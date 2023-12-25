@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { FileExtension, containsTest, getFileInfo } from './fileIcons'
+import { FileExtension } from '@sourcegraph/wildcard'
+
+import { containsTest, getFileInfo } from './fileIcons'
 
 describe('getFileInfo', () => {
     const tests: {
