@@ -92,7 +92,6 @@ const RenderedNotebookMarkdown = lazyComponent(() => import('./RenderedNotebookM
 
 interface BlobPageProps
     extends RepoFile,
-        ModeSpec,
         RepoHeaderContributionsLifecycleProps,
         SettingsCascadeProps,
         PlatformContextProps,
@@ -133,7 +132,7 @@ export const BlobPage: React.FunctionComponent<BlobPageProps> = ({ className, co
     const { span } = useCurrentSpan()
     const [wrapCode, setWrapCode] = useState(ToggleLineWrap.getValue())
     let renderMode = getModeFromURL(location)
-    const { repoID, repoName, repoServiceType, revision, commitID, filePath, useBreadcrumb, mode } = props
+    const { repoID, repoName, repoServiceType, revision, commitID, filePath, useBreadcrumb } = props
     const enableLazyBlobSyntaxHighlighting = useExperimentalFeatures(
         features => features.enableLazyBlobSyntaxHighlighting ?? true
     )
@@ -209,7 +208,6 @@ export const BlobPage: React.FunctionComponent<BlobPageProps> = ({ className, co
                                 repoName,
                                 revision,
                                 filePath,
-                                mode,
                                 languages: blob.languages,
                                 // Properties used in `BlobPage` but not `Blob`
                                 richHTML: blob.richHTML,
@@ -224,7 +222,7 @@ export const BlobPage: React.FunctionComponent<BlobPageProps> = ({ className, co
                         })
                     )
                 ),
-            [filePath, mode, repoName, revision, span, indexIDsForSnapshotData]
+            [filePath, repoName, revision, span, indexIDsForSnapshotData]
         )
     )
 
@@ -263,7 +261,6 @@ export const BlobPage: React.FunctionComponent<BlobPageProps> = ({ className, co
                             repoName,
                             revision,
                             filePath,
-                            mode,
                             languages: blob.languages,
                             // Properties used in `BlobPage` but not `Blob`
                             richHTML: blob.richHTML,
@@ -276,7 +273,7 @@ export const BlobPage: React.FunctionComponent<BlobPageProps> = ({ className, co
                     }),
                     catchError((error): [ErrorLike] => [asError(error)])
                 ),
-            [repoName, revision, filePath, mode, indexIDsForSnapshotData]
+            [repoName, revision, filePath, indexIDsForSnapshotData]
         )
     )
 
