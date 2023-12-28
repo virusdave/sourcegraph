@@ -12,6 +12,7 @@ import (
 
 	sglog "github.com/sourcegraph/log"
 
+	"github.com/sourcegraph/sourcegraph/cmd/frontend/envvar"
 	sgactor "github.com/sourcegraph/sourcegraph/internal/actor"
 	"github.com/sourcegraph/sourcegraph/internal/auth"
 	"github.com/sourcegraph/sourcegraph/internal/authz"
@@ -21,6 +22,7 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/errcode"
 	"github.com/sourcegraph/sourcegraph/internal/extsvc"
 	"github.com/sourcegraph/sourcegraph/internal/featureflag"
+	"github.com/sourcegraph/sourcegraph/internal/security"
 	"github.com/sourcegraph/sourcegraph/internal/usagestats"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
 )
@@ -127,6 +129,67 @@ func GetAndSaveUser(ctx context.Context, db database.DB, op GetAndSaveUserOp) (n
 
 		act := &sgactor.Actor{
 			SourcegraphOperator: acct.AccountSpec.ServiceType == auth.SourcegraphOperatorProviderType,
+		}
+
+		if envvar.SourcegraphDotComMode() {
+			domain, _ := security.ParseEmailDomain(op.UserProps.Email)
+
+			if banned, err := security.IsEmailBanned(op.UserProps.Email); err != nil {
+				return 0, false, false, "could not determine if email domain is banned", err
+			} else if banned {
+				args, err := json.Marshal(map[string]any{
+					"serviceType": acct.AccountSpec.ServiceType,
+					"serviceId":   acct.AccountSpec.ServiceID,
+					"emailDomain": domain,
+				})
+				err = usagestats.LogEvent(
+					ctx,
+					db,
+					usagestats.Event{
+						EventName:      "SignupBlocked:BannedDomain",
+						UserID:         0,
+						Argument:       args,
+						PublicArgument: args,
+						Source:         "BACKEND",
+					},
+				)
+				if err != nil {
+					logger.Error("failed to log event", sglog.String("eventName", "SignupBlocked:BannedDomain"), sglog.Error(err))
+				}
+				return 0, false, false, "this email address is not allowed to register", errors.New("email domain banned")
+			}
+
+			if acct.AccountSpec.ServiceID == "https://accounts.google.com" && domain != "gmail.com" {
+				banned, err := security.IsEmailBlockedDueToTooManySignups(op.UserProps.Email)
+
+				if err != nil {
+					return 0, false, false, "could not determine if email domain is banned", err
+				}
+
+				if banned {
+					args, err := json.Marshal(map[string]any{
+						"serviceType": acct.AccountSpec.ServiceType,
+						"serviceId":   acct.AccountSpec.ServiceID,
+						"emailDomain": domain,
+					})
+					err = usagestats.LogEvent(
+						ctx,
+						db,
+						usagestats.Event{
+							EventName:      "SignupBlocked:TooManySignups",
+							UserID:         0,
+							Argument:       args,
+							PublicArgument: args,
+							Source:         "BACKEND",
+						},
+					)
+					if err != nil {
+						logger.Error("failed to log event", sglog.String("eventName", "SignupBlocked:TooManySignups"), sglog.Error(err))
+					}
+
+					return 0, false, false, "this email address is not allowed to register", errors.New("Email not allowed to register")
+				}
+			}
 		}
 
 		// Fourth and finally, create a new user account and return it.

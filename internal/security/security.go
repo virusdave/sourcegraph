@@ -18,6 +18,7 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/conf"
 	"github.com/sourcegraph/sourcegraph/internal/errcode"
 	"github.com/sourcegraph/sourcegraph/internal/lazyregexp"
+	"github.com/sourcegraph/sourcegraph/internal/redispool"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
 )
 
@@ -50,32 +51,67 @@ func ensureBannedEmailDomainsLoaded() error {
 	return bannedEmailDomainsErr
 }
 
-func IsEmailBanned(email string) (bool, error) {
-	if err := ensureBannedEmailDomainsLoaded(); err != nil {
-		return false, err
-	}
-	if bannedEmailDomains.IsEmpty() {
-		return false, nil
-	}
-
+func ParseEmailDomain(email string) (string, error) {
 	addr, err := mail.ParseAddress(email)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	if len(addr.Address) == 0 {
-		return true, nil
+		return "", errors.New("email address is empty")
 	}
 
 	parts := strings.Split(addr.Address, "@")
 
 	if len(parts) < 2 {
+		return "", errors.New("email address is missing domain")
+	}
+
+	return strings.ToLower(parts[len(parts)-1]), nil
+}
+
+func IsEmailBanned(email string) (bool, error) {
+	if err := ensureBannedEmailDomainsLoaded(); err != nil {
+		return false, err
+	}
+
+	if bannedEmailDomains.IsEmpty() {
+		return false, nil
+	}
+
+	domain, err := ParseEmailDomain(email)
+	if err != nil {
+		return false, err
+	}
+
+	_, banned := bannedEmailDomains[domain]
+
+	return banned, nil
+}
+
+var (
+	redisStore    = redispool.Store
+	redisScopeKey = "auth:emails:"
+)
+
+func IsEmailBlockedDueToTooManySignups(email string) (bool, error) {
+	domain, _ := ParseEmailDomain(email)
+
+	key := redisScopeKey + domain
+	value := redisStore.Get(key)
+
+	if value.IsNil() {
+		redisStore.SetEx(key, 24*60*60, 1)
+		return false, nil
+	}
+
+	if emailsRegisteredInLast24Hours, _ := value.Int(); emailsRegisteredInLast24Hours > 30 {
 		return true, nil
 	}
 
-	_, banned := bannedEmailDomains[strings.ToLower(parts[len(parts)-1])]
+	_, err := redisStore.Incr(key)
 
-	return banned, nil
+	return false, err
 }
 
 // ValidateRemoteAddr validates if the input is a valid IP or a valid hostname.
