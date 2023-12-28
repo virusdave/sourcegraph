@@ -95,6 +95,12 @@ var (
 )
 
 func IsEmailBlockedDueToTooManySignups(email string) (bool, error) {
+	limit := conf.Get().SiteConfig().AuthDailyEmailDomainSignupLimit
+
+	if limit == 0 {
+		return false, nil
+	}
+
 	domain, _ := ParseEmailDomain(email)
 
 	key := redisScopeKey + domain
@@ -105,7 +111,7 @@ func IsEmailBlockedDueToTooManySignups(email string) (bool, error) {
 		return false, nil
 	}
 
-	if emailsRegisteredInLast24Hours, _ := value.Int(); emailsRegisteredInLast24Hours > 30 {
+	if emailsRegisteredInLast24Hours, _ := value.Int(); emailsRegisteredInLast24Hours > limit {
 		return true, nil
 	}
 

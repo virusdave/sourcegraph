@@ -162,8 +162,7 @@ func GetAndSaveUser(ctx context.Context, db database.DB, op GetAndSaveUserOp) (n
 				return 0, false, false, "this email address is not allowed to register", errors.New("email domain banned")
 			}
 
-			//if acct.AccountSpec.ServiceID == "https://accounts.google.com" && domain != "gmail.com" {
-			if true {
+			if acct.AccountSpec.ServiceID == "https://accounts.google.com" && domain != "gmail.com" {
 				banned, err := security.IsEmailBlockedDueToTooManySignups(op.UserProps.Email)
 
 				if err != nil {
