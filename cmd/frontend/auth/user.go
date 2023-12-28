@@ -134,9 +134,12 @@ func GetAndSaveUser(ctx context.Context, db database.DB, op GetAndSaveUserOp) (n
 		if envvar.SourcegraphDotComMode() {
 			domain, _ := security.ParseEmailDomain(op.UserProps.Email)
 
-			if banned, err := security.IsEmailBanned(op.UserProps.Email); err != nil {
+			banned, err := security.IsEmailBanned(op.UserProps.Email)
+			if err != nil {
 				return 0, false, false, "could not determine if email domain is banned", err
-			} else if banned {
+			}
+
+			if banned {
 				args, err := json.Marshal(map[string]any{
 					"serviceType": acct.AccountSpec.ServiceType,
 					"serviceId":   acct.AccountSpec.ServiceID,
@@ -159,7 +162,8 @@ func GetAndSaveUser(ctx context.Context, db database.DB, op GetAndSaveUserOp) (n
 				return 0, false, false, "this email address is not allowed to register", errors.New("email domain banned")
 			}
 
-			if acct.AccountSpec.ServiceID == "https://accounts.google.com" && domain != "gmail.com" {
+			//if acct.AccountSpec.ServiceID == "https://accounts.google.com" && domain != "gmail.com" {
+			if true {
 				banned, err := security.IsEmailBlockedDueToTooManySignups(op.UserProps.Email)
 
 				if err != nil {
