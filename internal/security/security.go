@@ -101,7 +101,10 @@ func IsEmailBlockedDueToTooManySignups(email string) (bool, error) {
 		return false, nil
 	}
 
-	domain, _ := ParseEmailDomain(email)
+	domain, err := ParseEmailDomain(email)
+	if err != nil {
+		return false, err
+	}
 
 	key := redisScopeKey + domain
 	value := redisStore.Get(key)
@@ -115,7 +118,7 @@ func IsEmailBlockedDueToTooManySignups(email string) (bool, error) {
 		return true, nil
 	}
 
-	_, err := redisStore.Incr(key)
+	_, err = redisStore.Incr(key)
 
 	return false, err
 }
